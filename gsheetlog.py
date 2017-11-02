@@ -43,11 +43,20 @@ def strip_file_id(file_id_or_url):
         return file_id_or_url
 
 
+def list_revisions(service, file_id):
+    response = service.revisions().list(fileId=file_id).execute()
+    revisions = response['items']
+    while 'nextPageToken' in response:
+        response = service.revisions().list(fileId=file_id, pageToken=response['nextPageToken']).execute()
+        revisions += response['items']
+    return revisions
+
+
 @click.command()
 @click.argument('file_id_or_url')
 def main(file_id_or_url):
     file_id = strip_file_id(file_id_or_url)
     service = get_service()
-    revisions = service.revisions().list(fileId=file_id).execute()
+    revisions = list_revisions(service, file_id)
     from pprint import pprint
     pprint(revisions)
