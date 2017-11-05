@@ -32,12 +32,12 @@ believe the content is immutable, but you can never tell with Google).
 
     """
 
-    _RATE = 5 # seconds per request
+    _WAIT = 5.7 # seconds per request
 
     def __init__(self, *args, **kwargs):
         super().__init__(cache=cache_dir(), *args, **kwargs)
 
-    @rate_limited(_RATE)
+    @rate_limited(every=_WAIT)
     def _conn_request(self, *args, **kwargs):
         response, content = super()._conn_request(*args, **kwargs)
         try:
