@@ -40,7 +40,6 @@ believe the content is immutable, but you can never tell with Google).
     @rate_limited(every=_WAIT)
     def _conn_request(self, *args, **kwargs):
         response, content = super()._conn_request(*args, **kwargs)
-        pprint(response)
         response['cache-control'] = 'ERASED'
         response['expires'] = 'Fri, 01 Jan 9999 00:00:00 GMT'
         return response, content
