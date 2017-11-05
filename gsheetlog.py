@@ -1,4 +1,5 @@
 import csv
+from itertools import zip_longest
 import os
 from pprint import pprint
 import re
@@ -118,10 +119,24 @@ def load_revision(service, revision):
     return list(csv.reader(content.decode('utf-8').split('\n')))
 
 
+def diff_sheet(prev, cur):
+    def enum_zip(x, y, fillvalue):
+        return enumerate(zip_longest(x, y, fillvalue=fillvalue), 1)
+    return [
+        { 'row': row, 'col': col, 'prev': prev_cell, 'cur': cur_cell }
+        for (row, (prev_row, cur_row)) in enum_zip(prev, cur, [])
+        for (col, (prev_cell, cur_cell)) in enum_zip(prev_row, cur_row, '')
+        if prev_cell != cur_cell
+    ]
+
+
 def process(service, file_id):
     revisions = service.list_revisions(file_id)
+    cur = []
     for revision in revisions:
-        revision['content'] = load_revision(service, revision)
+        prev = cur
+        cur = load_revision(service, revision)
+        revision['diff'] = diff_sheet(prev, cur)
         pprint(revision)
 
 
