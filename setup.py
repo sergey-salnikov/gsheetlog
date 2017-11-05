@@ -16,6 +16,7 @@ setup(
     install_requires=[
         'click',
         'google-api-python-client',
+        'ratelimit',
     ],
     entry_points={
         'console_scripts': [
