@@ -1,10 +1,10 @@
 import csv
-import httplib2
 import os
 from pprint import pprint
 import re
 import sys
-import time
+
+import httplib2
 
 import apiclient
 import oauth2client
@@ -114,7 +114,6 @@ def load_revision(service, revision):
         revision['exportLinks']['text/csv'],
         headers={'cache-control': 'min-fresh=-100000000000'}
     )
-    from pprint import pprint
     if response.status != 200:
         raise DownloadError(response)
     return list(csv.reader(content.decode('utf-8').split('\n')))
