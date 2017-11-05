@@ -1,7 +1,9 @@
 import csv
 import httplib2
 import os
+from pprint import pprint
 import re
+import sys
 import time
 
 import apiclient
@@ -67,24 +69,40 @@ class GoogleDriveService:
         # authenticate for ".../drive.metadata.readonly"), but tweaking that didn't bring any observable changes.
         self.service = apiclient.discovery.build('drive', 'v2', http=self.http)
 
-    def list_revisions(self, file_id):
-        response = self.service.revisions().list(fileId=file_id).execute()
-        revisions = response['items']
+    def _list(self, api, **kwargs):
+        response = api.list(**kwargs).execute()
+        items = response['items']
         while 'nextPageToken' in response:
-            response = self.service.revisions().list(fileId=file_id, pageToken=response['nextPageToken']).execute()
-            revisions += response['items']
-        return revisions
+            response = api.list(**kwargs, pageToken=response['nextPageToken']).execute()
+            items += response['items']
+        return items
+
+    def list_revisions(self, file_id):
+        return self._list(self.service.revisions(), fileId=file_id)
+
+    def list_folder(self, folder_id):
+        return self._list(self.service.children(), folderId=folder_id)
 
     def request(self, url, *args, **kwargs):
         return self.http.request(url, *args, **kwargs)
 
 
-def strip_file_id(file_id_or_url):
-    url_match = re.match('https://docs.google.com/spreadsheets/d/([^/]+)', file_id_or_url)
-    if url_match is not None:
-        return url_match.group(1)
-    else:
-        return file_id_or_url
+def extract_part(pattern, string):
+    match = re.match(pattern, string)
+    if match is not None:
+        return match.group(1)
+    return None
+
+
+def extract_file_id(url):
+    file_id = extract_part(r'https://docs.google.com/spreadsheets/d/([^/]+)', url)
+    if file_id is None:
+        file_id = extract_part(r'https://www.googleapis.com/drive/v\d/files/([^/]+)', url)
+    return file_id
+
+
+def extract_folder_id(url):
+    return extract_part(r'https://drive.google.com/drive/folders/([^/]+)', url)
 
 
 class DownloadError(Exception):
@@ -103,13 +121,25 @@ def load_revision(service, revision):
     return list(csv.reader(content.decode('utf-8').split('\n')))
 
 
-@click.command()
-@click.argument('file_id_or_url')
-def main(file_id_or_url):
-    file_id = strip_file_id(file_id_or_url)
-    service = GoogleDriveService()
+def process(service, file_id):
     revisions = service.list_revisions(file_id)
     for revision in revisions:
         revision['content'] = load_revision(service, revision)
-        from pprint import pprint
         pprint(revision)
+
+
+@click.command()
+@click.argument('url')
+def main(url):
+    service = GoogleDriveService()
+    file_id = extract_file_id(url)
+    if file_id is not None:
+        process(service, file_id)
+    else:
+        folder_id = extract_folder_id(url)
+        if folder_id is not None:
+            for file in service.list_folder(folder_id):
+                file_id = extract_file_id(file['childLink'])
+                process(service, file_id)
+        else:
+            sys.exit("URL not understood")
