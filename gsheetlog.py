@@ -32,7 +32,7 @@ believe the content is immutable, but you can never tell with Google).
 
     """
 
-    _WAIT = 5.7 # seconds per request
+    _WAIT = 10 # seconds per request
 
     def __init__(self, *args, **kwargs):
         super().__init__(cache=cache_dir(), *args, **kwargs)
