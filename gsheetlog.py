@@ -130,28 +130,50 @@ def diff_sheet(prev, cur):
     ]
 
 
-def process(service, file_id):
+def load_revisions(service, file_id):
     revisions = service.list_revisions(file_id)
     cur = []
     for revision in revisions:
         prev = cur
         cur = load_revision(service, revision)
         revision['diff'] = diff_sheet(prev, cur)
-        pprint(revision)
+    return revisions
+
+
+def get_file_id_list(service, urls):
+    file_ids = []
+    for url in urls:
+        file_id = extract_file_id(url)
+        if file_id is not None:
+            file_ids.append(file_id)
+        else:
+            folder_id = extract_folder_id(url)
+            if folder_id is not None:
+                file_ids += [
+                    extract_file_id(file['childLink'])
+                    for file in service.list_folder(folder_id)
+                ]
+            else:
+                raise ValueError("URL not understood")
+    return file_ids
+
+
+def gsheetlog(urls):
+    """Returns the change log for given urls as a list with one dict per
+spreadsheet. Urls may point to spreadsheets or to folders of
+spreadsheets (one level expanded).
+    """
+    service = GoogleDriveService()
+    return [
+        {
+            'file_id': file_id,
+            'revisions': load_revisions(service, file_id)
+        }
+        for file_id in get_file_id_list(service, urls)
+    ]
 
 
 @click.command()
-@click.argument('url')
-def main(url):
-    service = GoogleDriveService()
-    file_id = extract_file_id(url)
-    if file_id is not None:
-        process(service, file_id)
-    else:
-        folder_id = extract_folder_id(url)
-        if folder_id is not None:
-            for file in service.list_folder(folder_id):
-                file_id = extract_file_id(file['childLink'])
-                process(service, file_id)
-        else:
-            sys.exit("URL not understood")
+@click.argument('urls', nargs=-1)
+def main(urls):
+    pprint(gsheetlog(urls))
