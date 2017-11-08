@@ -164,6 +164,7 @@ spreadsheets (one level expanded).
             revision['diff'] = diff_sheet(prev, cur)
         result.append({
             'file': service.get_file_metadata(file_id),
+            'content': cur,
             'revisions': revisions,
         })
     return result
