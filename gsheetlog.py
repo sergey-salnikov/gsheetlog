@@ -68,6 +68,9 @@ class GoogleDriveService:
         # authenticate for ".../drive.metadata.readonly"), but tweaking that didn't bring any observable changes.
         self.service = apiclient.discovery.build('drive', 'v2', http=self.http)
 
+    def get_file_metadata(self, file_id):
+        return self.service.files().get(fileId=file_id).execute()
+
     def _list(self, api, **kwargs):
         response = api.list(**kwargs).execute()
         items = response['items']
@@ -166,7 +169,7 @@ spreadsheets (one level expanded).
     service = GoogleDriveService()
     return [
         {
-            'file_id': file_id,
+            'file': service.get_file_metadata(file_id),
             'revisions': load_revisions(service, file_id)
         }
         for file_id in get_file_id_list(service, urls)
