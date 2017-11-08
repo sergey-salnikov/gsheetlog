@@ -45,6 +45,12 @@ believe the content is immutable, but you can never tell with Google).
         response['expires'] = 'Fri, 01 Jan 9999 00:00:00 GMT'
         return response, content
 
+
+class DownloadError(Exception):
+    def __init__(self, response):
+        super().__init__(f"HTTP {response.status}")
+
+
 class GoogleDriveService:
     def __init__(self):
         app_dir = click.get_app_dir(APP_NAME)
@@ -85,8 +91,14 @@ class GoogleDriveService:
     def list_folder(self, folder_id):
         return self._list(self.service.children(), folderId=folder_id)
 
-    def request(self, url, *args, **kwargs):
-        return self.http.request(url, *args, **kwargs)
+    def load_revision(self, revision):
+        response, content = self.http.request(
+            revision['exportLinks']['text/csv'],
+            headers={'cache-control': 'min-fresh=-100000000000'}
+        )
+        if response.status != 200:
+            raise DownloadError(response)
+        return list(csv.reader(content.decode('utf-8').split('\n')))
 
 
 def extract_part(pattern, string):
@@ -107,21 +119,6 @@ def extract_folder_id(url):
     return extract_part(r'https://drive.google.com/drive/folders/([^/]+)', url)
 
 
-class DownloadError(Exception):
-    def __init__(self, response):
-        super().__init__(f"HTTP {response.status}")
-
-
-def load_revision(service, revision):
-    response, content = service.request(
-        revision['exportLinks']['text/csv'],
-        headers={'cache-control': 'min-fresh=-100000000000'}
-    )
-    if response.status != 200:
-        raise DownloadError(response)
-    return list(csv.reader(content.decode('utf-8').split('\n')))
-
-
 def diff_sheet(prev, cur):
     def enum_zip(x, y, fillvalue):
         return enumerate(zip_longest(x, y, fillvalue=fillvalue), 1)
@@ -131,16 +128,6 @@ def diff_sheet(prev, cur):
         for (col, (prev_cell, cur_cell)) in enum_zip(prev_row, cur_row, '')
         if prev_cell != cur_cell
     ]
-
-
-def load_revisions(service, file_id):
-    revisions = service.list_revisions(file_id)
-    cur = []
-    for revision in revisions:
-        prev = cur
-        cur = load_revision(service, revision)
-        revision['diff'] = diff_sheet(prev, cur)
-    return revisions
 
 
 def get_file_id_list(service, urls):
@@ -167,13 +154,19 @@ spreadsheet. Urls may point to spreadsheets or to folders of
 spreadsheets (one level expanded).
     """
     service = GoogleDriveService()
-    return [
-        {
+    result = []
+    for file_id in get_file_id_list(service, urls):
+        revisions = service.list_revisions(file_id)
+        cur = []
+        for revision in revisions:
+            prev = cur
+            cur = service.load_revision(revision)
+            revision['diff'] = diff_sheet(prev, cur)
+        result.append({
             'file': service.get_file_metadata(file_id),
-            'revisions': load_revisions(service, file_id)
-        }
-        for file_id in get_file_id_list(service, urls)
-    ]
+            'revisions': revisions,
+        })
+    return result
 
 
 @click.command()
