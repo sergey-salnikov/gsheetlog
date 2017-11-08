@@ -158,7 +158,7 @@ def get_file_id_list(service, urls):
     return file_ids
 
 
-def gsheetlog(urls):
+def gsheetlog(*urls):
     """Returns the change log for given urls as a list with one dict per
 spreadsheet. Urls may point to spreadsheets or to folders of
 spreadsheets (one level expanded).
@@ -176,4 +176,4 @@ spreadsheets (one level expanded).
 @click.command()
 @click.argument('urls', nargs=-1)
 def main(urls):
-    pprint(gsheetlog(urls))
+    pprint(gsheetlog(*urls))
