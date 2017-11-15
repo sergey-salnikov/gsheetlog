@@ -92,10 +92,7 @@ class GoogleDriveService:
         return self._list(self.service.children(), folderId=folder_id)
 
     def load_revision(self, revision):
-        response, content = self.http.request(
-            revision['exportLinks']['text/csv'],
-            headers={'cache-control': 'min-fresh=-100000000000'}
-        )
+        response, content = self.http.request(revision['exportLinks']['text/csv'])
         if response.status != 200:
             raise DownloadError(response)
         return list(csv.reader(content.decode('utf-8').split('\n')))
