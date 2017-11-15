@@ -88,6 +88,9 @@ class GoogleDriveService:
     def list_revisions(self, file_id):
         return self._list(self.service.revisions(), fileId=file_id)
 
+    def list_permissions(self, file_id):
+        return self._list(self.service.permissions(), fileId=file_id)
+
     def list_folder(self, folder_id):
         return self._list(self.service.children(), folderId=folder_id)
 
@@ -161,6 +164,7 @@ spreadsheets (one level expanded).
             revision['diff'] = diff_sheet(prev, cur)
         result.append({
             'file': service.get_file_metadata(file_id),
+            'permissions': service.list_permissions(file_id),
             'content': cur,
             'revisions': revisions,
         })
