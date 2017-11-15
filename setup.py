@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='gsheetlog',
-    version='0.1.0',
+    version='0.1.1',
     description='Extract Google Sheet history',
     author='Sergey Salnikov',
     author_email='serg@salnikov.ru',
@@ -12,7 +12,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
     ],
-    packages=find_packages(),
+    py_modules=['gsheetlog'],
     install_requires=[
         'click',
         'google-api-python-client',
