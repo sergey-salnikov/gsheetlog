@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='gsheetlog',
-    version='0.3.0',
+    version='0.3.1',
     description='Extract Google Sheet history',
     author='Sergey Salnikov',
     author_email='serg@salnikov.ru',
