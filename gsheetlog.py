@@ -154,7 +154,6 @@ spreadsheet. Urls may point to spreadsheets or to folders of
 spreadsheets (one level expanded).
     """
     service = GoogleDriveService()
-    result = []
     for file_id in get_file_id_list(service, urls):
         revisions = service.list_revisions(file_id)
         cur = []
@@ -162,16 +161,16 @@ spreadsheets (one level expanded).
             prev = cur
             cur = service.load_revision(revision)
             revision['diff'] = diff_sheet(prev, cur)
-        result.append({
+        yield {
             'file': service.get_file_metadata(file_id),
             'permissions': service.list_permissions(file_id),
             'content': cur,
             'revisions': revisions,
-        })
-    return result
+        }
 
 
 @click.command()
 @click.argument('urls', nargs=-1)
 def main(urls):
-    pprint(gsheetlog(*urls))
+    for record in gsheetlog(*urls):
+        pprint(record)
