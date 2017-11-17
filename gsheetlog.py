@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 from itertools import zip_longest
 import os
 from pprint import pprint
@@ -148,14 +149,33 @@ def get_file_id_list(service, urls):
     return file_ids
 
 
-def gsheetlog(*urls):
+def revision_time(revision):
+    return datetime.strptime(revision['modifiedDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def revision_author(revision):
+    return revision['lastModifyingUser']['emailAddress']
+
+
+def squash_revisions(revisions, timeout):
+    return [
+        revisions[i] for i in range(len(revisions))
+        if (i == len(revisions) - 1 or
+            revision_author(revisions[i+1]) != revision_author(revisions[i]) or
+            (revision_time(revisions[i+1]) - revision_time(revisions[i])).total_seconds() > timeout)
+    ]
+
+
+def gsheetlog(*urls, squash_timeout=0):
     """Returns the change log for given urls as a list with one dict per
 spreadsheet. Urls may point to spreadsheets or to folders of
-spreadsheets (one level expanded).
+spreadsheets (one level expanded). Changes by the same user made one
+after another with intervals less then squash_timeout seconds are
+squashed.
     """
     service = GoogleDriveService()
     for file_id in get_file_id_list(service, urls):
-        revisions = service.list_revisions(file_id)
+        revisions = squash_revisions(service.list_revisions(file_id), squash_timeout)
         cur = []
         for revision in revisions:
             prev = cur
